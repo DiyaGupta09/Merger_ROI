@@ -1,0 +1,293 @@
+.merger-analysis {
+  background: white;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  margin-top: 24px;
+}
+
+.merger-analysis h2 {
+  font-size: 24px;
+  margin-bottom: 24px;
+  color: #1a202c;
+  font-weight: 700;
+  text-align: center;
+}
+
+.company-selection {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 30px;
+  margin-bottom: 30px;
+}
+
+.company-input-group {
+  position: relative;
+  flex: 1;
+  max-width: 400px;
+}
+
+.company-input-group label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #4a5568;
+  margin-bottom: 8px;
+}
+
+.company-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 16px;
+  transition: all 0.3s ease;
+  outline: none;
+}
+
+.company-input:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.merger-icon {
+  font-size: 32px;
+  color: #cbd5e0;
+  font-weight: 300;
+  margin-top: 20px;
+}
+
+.search-results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+  margin-top: 5px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.search-result-item {
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: background 0.2s;
+  font-size: 14px;
+  color: #2d3748;
+}
+
+.search-result-item:hover {
+  background: #f7fafc;
+  color: #667eea;
+}
+
+.analyze-button {
+  display: block;
+  width: 200px;
+  margin: 0 auto 30px;
+  padding: 14px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(102, 126, 234, 0.2);
+}
+
+.analyze-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 7px 14px rgba(102, 126, 234, 0.3);
+}
+
+.analyze-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: #cbd5e0;
+  box-shadow: none;
+}
+
+.error-message {
+  background: #fff5f5;
+  color: #c53030;
+  padding: 12px;
+  border-radius: 8px;
+  text-align: center;
+  margin-bottom: 20px;
+  font-size: 14px;
+  border: 1px solid #feb2b2;
+}
+
+.analysis-results {
+  border-top: 2px solid #edf2f7;
+  padding-top: 30px;
+  animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.result-header h3 {
+  font-size: 20px;
+  color: #2d3748;
+}
+
+.recommendation {
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.recommendation.buy { background: #c6f6d5; color: #22543d; }
+.recommendation.hold { background: #feebc8; color: #744210; }
+.recommendation.sell { background: #fed7d7; color: #822727; }
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 40px;
+}
+
+.metric-card {
+  padding: 20px;
+  background: #f7fafc;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.metric-card.highlight {
+  background: #ebf4ff;
+  border: 1px solid #bee3f8;
+}
+
+.metric-label {
+  font-size: 12px;
+  color: #718096;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.metric-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #2d3748;
+}
+
+.metric-value.success {
+  color: #38a169;
+}
+
+.equity-distribution {
+  margin-bottom: 40px;
+}
+
+.equity-distribution h4 {
+  font-size: 16px;
+  color: #4a5568;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.equity-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.equity-bar {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.equity-label {
+  width: 150px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #4a5568;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.equity-progress {
+  flex: 1;
+  height: 24px;
+  background: #edf2f7;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.equity-fill {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  transition: width 1s ease-out;
+}
+
+.equity-fill.firm-a { background: #667eea; }
+.equity-fill.firm-b { background: #b794f4; }
+
+.firm-details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.firm-detail-card {
+  padding: 20px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+.firm-detail-card h4 {
+  margin-bottom: 12px;
+  color: #4a5568;
+  border-bottom: 1px solid #edf2f7;
+  padding-bottom: 8px;
+}
+
+.firm-detail-card p {
+  font-size: 14px;
+  color: #718096;
+  margin-bottom: 5px;
+}
+
+@media (max-width: 768px) {
+  .company-selection {
+    flex-direction: column;
+    gap: 15px;
+  }
+  .merger-icon {
+    transform: rotate(90deg);
+    margin-top: 0;
+  }
+  .firm-details {
+    grid-template-columns: 1fr;
+  }
+}
