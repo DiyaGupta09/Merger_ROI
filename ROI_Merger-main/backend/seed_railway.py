@@ -52,5 +52,42 @@ def seed():
     finally:
         connection.close()
 
+def seed_ai_schema():
+    """Run AI schema extensions after base seed."""
+    print("🤖 Seeding AI schema extensions...")
+    connection = pymysql.connect(
+        host=os.getenv("DB_HOST"),
+        port=int(os.getenv("DB_PORT", 3306)),
+        user=os.getenv("DB_USER"),
+        password=os.getenv("DB_PASSWORD"),
+        database=os.getenv("DB_NAME"),
+        charset='utf8mb4',
+        cursorclass=pymysql.cursors.DictCursor,
+        autocommit=True
+    )
+    try:
+        ai_sql_path = "ai_schema.sql"
+        if not os.path.exists(ai_sql_path):
+            ai_sql_path = "../database/ai_schema.sql"
+        if not os.path.exists(ai_sql_path):
+            print("⚠️ ai_schema.sql not found, skipping AI schema seed.")
+            return
+        with open(ai_sql_path, 'r', encoding='utf-8') as f:
+            sql_commands = f.read().split(';')
+        with connection.cursor() as cursor:
+            for command in sql_commands:
+                command = command.strip()
+                if not command or command.startswith('--'):
+                    continue
+                try:
+                    cursor.execute(command)
+                except Exception as e:
+                    print(f"⚠️ AI schema warning: {str(e)[:60]}")
+        print("✅ AI schema seeded.")
+    finally:
+        connection.close()
+
+
 if __name__ == "__main__":
     seed()
+    seed_ai_schema()

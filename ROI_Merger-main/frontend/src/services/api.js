@@ -1,66 +1,30 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'https://roimerger-production.up.railway.app';
+const BASE_URL = process.env.REACT_APP_API_URL || 'https://roimerger-production.up.railway.app';
 
-const apiClient = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  timeout: 10000, // 10 second timeout
+const client = axios.create({
+  baseURL: BASE_URL,
+  headers: { 'Content-Type': 'application/json' },
+  timeout: 30000,
 });
 
 const api = {
-  getDashboardSummary: async () => {
-    try {
-      console.log('Fetching summary from:', API_BASE_URL + '/api/dashboard/summary');
-      const response = await apiClient.get('/api/dashboard/summary');
-      return response.data;
-    } catch (error) {
-      console.error('FETCH ERROR (Summary):', error.response ? error.response.data : error.message);
-      throw error;
-    }
-  },
+  // --- Existing ---
+  getDashboardSummary: () => client.get('/api/dashboard/summary').then(r => r.data),
+  getFirms: (limit) => client.get('/api/firms', { params: limit ? { limit } : {} }).then(r => r.data),
+  getROI: (firmId) => client.get('/api/roi', { params: firmId ? { firm_id: firmId } : {} }).then(r => r.data),
+  getBottlenecks: () => client.get('/api/bottlenecks').then(r => r.data),
+  getResourceRecommendations: () => client.get('/api/resources/recommendations').then(r => r.data),
+  analyzeMerger: (a, b) => client.post('/api/merger/analyze', null, { params: { firm_a_id: a, firm_b_id: b } }).then(r => r.data),
 
-  getFirms: async (limit = null) => {
-    const params = limit ? { limit } : {};
-    const response = await apiClient.get('/api/firms', { params });
-    return response.data;
-  },
-
-  searchFirms: async (query) => {
-    const response = await apiClient.get('/api/firms', { params: { name: query } });
-    return response.data;
-  },
-
-  getROI: async (firmId = null) => {
-    const params = firmId ? { firm_id: firmId } : {};
-    const response = await apiClient.get('/api/roi', { params });
-    return response.data;
-  },
-
-  getCapitalProductivity: async (firmId = null) => {
-    const params = firmId ? { firm_id: firmId } : {};
-    const response = await apiClient.get('/api/capital/productivity', { params });
-    return response.data;
-  },
-
-  getBottlenecks: async () => {
-    const response = await apiClient.get('/api/bottlenecks');
-    return response.data;
-  },
-
-  getResourceRecommendations: async () => {
-    const response = await apiClient.get('/api/resources/recommendations');
-    return response.data;
-  },
-
-  analyzeMerger: async (firmAId, firmBId) => {
-    const response = await apiClient.post('/api/merger/analyze', null, {
-      params: { firm_a_id: firmAId, firm_b_id: firmBId }
-    });
-    return response.data;
-  },
+  // --- AI Endpoints ---
+  getForecast: (firmId = 1) => client.get('/api/forecast', { params: { firm_id: firmId } }).then(r => r.data),
+  getExplanation: (firmId = 1) => client.get('/api/explain', { params: { firm_id: firmId } }).then(r => r.data),
+  getOptimization: (firmId = 1, train = false) => client.get('/api/optimize', { params: { firm_id: firmId, train } }).then(r => r.data),
+  getSimulation: (firmId = 1) => client.get('/api/simulate', { params: { firm_id: firmId } }).then(r => r.data),
+  getMarketData: (symbol = 'SPY') => client.get('/api/market', { params: { symbol } }).then(r => r.data),
+  getTimeseries: (firmId = 1) => client.get('/api/timeseries', { params: { firm_id: firmId } }).then(r => r.data),
+  getHealth: () => client.get('/api/health').then(r => r.data),
 };
 
 export default api;

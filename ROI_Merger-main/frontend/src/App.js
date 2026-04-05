@@ -1,73 +1,65 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
+import Sidebar from './components/Sidebar';
+import Landing from './components/Landing';
 import Dashboard from './components/Dashboard';
-import MergerAnalysis from './components/MergerAnalysis';
-import Header from './components/Header';
+import AIInsights from './components/AIInsights';
+import Simulation from './components/Simulation';
+import DataConfig from './components/DataConfig';
 import api from './services/api';
 
-function App() {
-  const [summary, setSummary] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('dashboard');
+export default function App() {
+  const [page, setPage] = useState('landing');
+  const [firmId, setFirmId] = useState(1);
+  const [firms, setFirms] = useState([]);
+  const [apiStatus, setApiStatus] = useState('connecting');
 
   useEffect(() => {
-    loadSummary();
+    api.getHealth()
+      .then(h => setApiStatus(h.status === 'healthy' ? 'healthy' : 'degraded'))
+      .catch(() => setApiStatus('degraded'));
+
+    api.getFirms(20)
+      .then(d => setFirms(d.firms || []))
+      .catch(() => {});
   }, []);
 
-  const loadSummary = async () => {
-    try {
-      const data = await api.getDashboardSummary();
-      setSummary(data);
-    } catch (error) {
-      console.error('Failed to load summary:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const isLanding = page === 'landing';
 
   return (
-    <div className="App">
-      <Header />
+    <div className="app">
+      {!isLanding && (
+        <Sidebar active={page} onNavigate={setPage} apiStatus={apiStatus} />
+      )}
 
-      <nav className="main-nav">
-        <div className="nav-container">
-          <button
-            className={`nav-button ${activeTab === 'dashboard' ? 'active' : ''}`}
-            onClick={() => setActiveTab('dashboard')}
-          >
-            📊 Executive Dashboard
-          </button>
-          <button
-            className={`nav-button ${activeTab === 'merger' ? 'active' : ''}`}
-            onClick={() => setActiveTab('merger')}
-          >
-            🤝 Merger Analysis
-          </button>
-        </div>
-      </nav>
-
-      <main className="main-content">
-        {loading ? (
-          <div className="loading-container">
-            <div className="loader"></div>
-            <p>Gathering financial intelligence...</p>
+      <div className={isLanding ? '' : 'main-content'}>
+        {!isLanding && page !== 'config' && (
+          <div className="topbar" style={{ marginBottom: 0 }}>
+            <div />
+            <div className="topbar-right">
+              <label style={{ fontSize: 12, color: 'var(--text-muted)' }}>Firm:</label>
+              <select
+                className="firm-select"
+                value={firmId}
+                onChange={e => setFirmId(Number(e.target.value))}
+              >
+                {firms.length > 0
+                  ? firms.map(f => (
+                      <option key={f.firm_id} value={f.firm_id}>{f.firm_name}</option>
+                    ))
+                  : <option value={1}>Firm 1</option>
+                }
+              </select>
+            </div>
           </div>
-        ) : (
-          <>
-            {activeTab === 'dashboard' ? (
-              <Dashboard summary={summary} />
-            ) : (
-              <MergerAnalysis />
-            )}
-          </>
         )}
-      </main>
 
-      <footer className="footer">
-        <p>&copy; 2026 Merger ROI Analytics Engine. All rights reserved.</p>
-      </footer>
+        {page === 'landing' && <Landing onNavigate={setPage} />}
+        {page === 'dashboard' && <Dashboard firmId={firmId} />}
+        {page === 'insights' && <AIInsights firmId={firmId} />}
+        {page === 'simulation' && <Simulation firmId={firmId} />}
+        {page === 'config' && <DataConfig />}
+      </div>
     </div>
   );
 }
-
-export default App;

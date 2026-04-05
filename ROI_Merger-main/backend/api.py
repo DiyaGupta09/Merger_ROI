@@ -1,10 +1,11 @@
 """
-FastAPI application for Merger ROI Dashboard
+FastAPI application - AI-Powered Financial Decision Intelligence Platform
 """
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from typing import Optional, List
+from typing import Optional
 import logging
+import numpy as np
 
 from config import config
 from database import get_db_connection
@@ -15,12 +16,18 @@ from bottleneck_detector import BottleneckDetector
 from resource_optimizer import ResourceOptimizer
 from merger_analyzer import MergerAnalyzer
 
+# AI Agents
+from data_agent import DataAgent
+from forecasting_agent import ForecastingAgent
+from explanation_agent import ExplanationAgent
+from rl_agent import RLAgent
+from simulation_agent import SimulationAgent
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Merger ROI Dashboard API", version="1.0.0")
+app = FastAPI(title="AI Financial Decision Intelligence API", version="2.0.0")
 
-# CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=config.CORS_ORIGINS,
@@ -29,23 +36,37 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Singleton agent instances (stateful models persist across requests)
+_data_agent = DataAgent()
+_forecasting_agent = ForecastingAgent(horizon=30, lags=3)
+_explanation_agent = ExplanationAgent()
+_rl_agent = RLAgent()
+_simulation_agent = SimulationAgent(horizon=30)
+
+
+# ---------------------------------------------------------------------------
+# Health & Root
+# ---------------------------------------------------------------------------
 @app.get("/")
 def root():
-    return {"message": "Merger ROI Dashboard API", "version": "1.0.0"}
+    return {"message": "AI Financial Decision Intelligence API", "version": "2.0.0"}
+
 
 @app.get("/api/health")
 def health_check():
-    """Health check endpoint"""
     try:
         with get_db_connection() as db:
             db.execute_query("SELECT 1")
         return {"status": "healthy", "database": "connected"}
     except Exception as e:
-        return {"status": "unhealthy", "error": str(e)}
+        return {"status": "degraded", "database": "disconnected", "error": str(e)}
 
+
+# ---------------------------------------------------------------------------
+# Existing endpoints (preserved)
+# ---------------------------------------------------------------------------
 @app.get("/api/firms")
 def get_firms(limit: Optional[int] = Query(None, le=100)):
-    """Get all firms"""
     try:
         with get_db_connection() as db:
             loader = DataLoader(db)
@@ -54,40 +75,37 @@ def get_firms(limit: Optional[int] = Query(None, le=100)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @app.get("/api/roi")
 def get_roi(firm_id: Optional[int] = None):
-    """Get ROI metrics"""
     try:
         with get_db_connection() as db:
             calculator = ROICalculator(db)
             if firm_id:
-                roi = calculator.calculate_roi(firm_id)
-                return roi
-            else:
-                roi_list = calculator.calculate_all_firms_roi()
-                return {"roi_metrics": roi_list, "count": len(roi_list)}
+                return calculator.calculate_roi(firm_id)
+            roi_list = calculator.calculate_all_firms_roi()
+            return {"roi_metrics": roi_list, "count": len(roi_list)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @app.get("/api/capital/productivity")
 def get_capital_productivity(firm_id: Optional[int] = None):
-    """Get capital productivity metrics"""
     try:
         with get_db_connection() as db:
             analyzer = CapitalAnalyzer(db)
             if firm_id:
-                metrics = analyzer.calculate_capital_productivity(firm_id)
-                return metrics
-            else:
-                aggregate = analyzer.calculate_aggregate_metrics()
-                outliers = analyzer.identify_productivity_outliers()
-                return {"aggregate": aggregate, "outliers": outliers}
+                return analyzer.calculate_capital_productivity(firm_id)
+            return {
+                "aggregate": analyzer.calculate_aggregate_metrics(),
+                "outliers": analyzer.identify_productivity_outliers(),
+            }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @app.get("/api/bottlenecks")
 def get_bottlenecks():
-    """Get identified bottlenecks"""
     try:
         with get_db_connection() as db:
             detector = BottleneckDetector(db)
@@ -96,9 +114,9 @@ def get_bottlenecks():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @app.get("/api/resources/recommendations")
 def get_resource_recommendations():
-    """Get resource allocation recommendations"""
     try:
         with get_db_connection() as db:
             optimizer = ResourceOptimizer(db)
@@ -107,43 +125,171 @@ def get_resource_recommendations():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @app.post("/api/merger/analyze")
 def analyze_merger(firm_a_id: int, firm_b_id: int):
-    """Analyze merger opportunity"""
     try:
         with get_db_connection() as db:
             analyzer = MergerAnalyzer(db)
-            analysis = analyzer.analyze_merger(firm_a_id, firm_b_id)
-        return analysis
+            return analyzer.analyze_merger(firm_a_id, firm_b_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @app.get("/api/dashboard/summary")
 def get_dashboard_summary():
-    """Get executive summary metrics"""
     try:
         with get_db_connection() as db:
-            # Total revenue
-            revenue_query = "SELECT COALESCE(SUM(total_amount), 0) as total FROM sales"
-            total_revenue = db.execute_query(revenue_query)[0]['total']
-            
-            # Total firms
-            firms_query = "SELECT COUNT(*) as count FROM firm"
-            total_firms = db.execute_query(firms_query)[0]['count']
-            
-            # Total staff
-            staff_query = "SELECT COUNT(*) as count FROM staff"
-            total_staff = db.execute_query(staff_query)[0]['count']
-            
-            # Average ROI
+            total_revenue = db.execute_query(
+                "SELECT COALESCE(SUM(total_amount), 0) as total FROM sales"
+            )[0]["total"]
+            total_firms = db.execute_query(
+                "SELECT COUNT(*) as count FROM firm"
+            )[0]["count"]
+            total_staff = db.execute_query(
+                "SELECT COUNT(*) as count FROM staff"
+            )[0]["count"]
             calculator = ROICalculator(db)
             avg_roi = calculator.calculate_average_roi()
-            
         return {
             "total_revenue": float(total_revenue),
             "total_firms": int(total_firms),
             "total_staff": int(total_staff),
-            "average_roi": avg_roi
+            "average_roi": avg_roi,
         }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# AI Endpoints
+# ---------------------------------------------------------------------------
+
+@app.get("/api/forecast")
+def forecast_roi(firm_id: Optional[int] = Query(1)):
+    """Returns 30-day ROI forecast with confidence intervals."""
+    try:
+        with get_db_connection() as db:
+            state = _data_agent.get_firm_state(db, firm_id)
+        roi_series = state.get("roi_series", [])
+        result = _forecasting_agent.forecast(roi_series)
+        return {
+            "firm_id": firm_id,
+            "horizon_days": 30,
+            **result,
+        }
+    except Exception as e:
+        logger.error(f"/api/forecast error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/explain")
+def explain_roi(firm_id: Optional[int] = Query(1)):
+    """Returns SHAP-based feature importance and narrative explanation."""
+    try:
+        with get_db_connection() as db:
+            # Build feature matrix from all firms for training
+            roi_rows = db.execute_query("""
+                SELECT f.total_capital, COALESCE(SUM(s.total_amount),0) as revenue,
+                       COALESCE(SUM(st.salary),0) as salary_cost,
+                       COUNT(DISTINCT st.staff_id) as staff_count,
+                       COALESCE(AVG(st.performance_score),0) as avg_perf,
+                       COUNT(s.sale_id) as task_count
+                FROM firm f
+                LEFT JOIN sales s ON s.firm_id = f.firm_id
+                LEFT JOIN staff st ON st.firm_id = f.firm_id
+                GROUP BY f.firm_id, f.total_capital
+            """)
+
+        if not roi_rows:
+            raise HTTPException(status_code=404, detail="No data available")
+
+        X_list, y_list = [], []
+        for row in roi_rows:
+            rev = float(row.get("revenue", 0))
+            cost = float(row.get("salary_cost", 1))
+            cap = float(row.get("total_capital", 1))
+            staff = float(row.get("staff_count", 1))
+            perf = float(row.get("avg_perf", 0))
+            tasks = float(row.get("task_count", 0))
+            roi = (rev - cost) / max(cost, 1) * 100
+            rev_per_emp = rev / max(staff, 1)
+            budget = cost * 1.2
+            cash = rev - cost
+            X_list.append([rev, cost, staff, perf, cap, rev_per_emp, tasks, budget, cash])
+            y_list.append(roi)
+
+        X = np.array(X_list, dtype=np.float32)
+        y = np.array(y_list, dtype=np.float32)
+        _explanation_agent.fit(X, y)
+
+        # Explain the target firm
+        target_idx = min(firm_id - 1, len(X_list) - 1)
+        result = _explanation_agent.explain(X[target_idx])
+        return {"firm_id": firm_id, **result}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"/api/explain error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/optimize")
+def optimize_capital(firm_id: Optional[int] = Query(1), train: bool = False):
+    """Returns RL-based capital allocation recommendation."""
+    try:
+        with get_db_connection() as db:
+            state = _data_agent.get_firm_state(db, firm_id)
+
+        if train or not _rl_agent._trained:
+            _rl_agent.train(state, timesteps=3000)
+
+        result = _rl_agent.recommend(state)
+        return {"firm_id": firm_id, **result}
+    except Exception as e:
+        logger.error(f"/api/optimize error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/simulate")
+def simulate(firm_id: Optional[int] = Query(1)):
+    """Runs 30-day simulation: current strategy vs RL-optimized strategy."""
+    try:
+        with get_db_connection() as db:
+            state = _data_agent.get_firm_state(db, firm_id)
+
+        if not _rl_agent._trained:
+            _rl_agent.train(state, timesteps=3000)
+
+        rl_result = _rl_agent.recommend(state)
+        sim_result = _simulation_agent.simulate(state, rl_result["recommendations"])
+        return {
+            "firm_id": firm_id,
+            "rl_recommendations": rl_result,
+            **sim_result,
+        }
+    except Exception as e:
+        logger.error(f"/api/simulate error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/market")
+def get_market_data(symbol: str = "SPY"):
+    """Fetch live market data from Alpha Vantage."""
+    try:
+        data = _data_agent.get_market_data(symbol)
+        sectors = _data_agent.get_sector_performance()
+        return {"market": data, "sectors": sectors}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/timeseries")
+def get_timeseries(firm_id: Optional[int] = Query(1)):
+    """Returns historical ROI time-series for a firm."""
+    try:
+        with get_db_connection() as db:
+            rows = _data_agent.get_roi_timeseries(db, firm_id)
+        return {"firm_id": firm_id, "data": rows, "count": len(rows)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
