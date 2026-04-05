@@ -6,6 +6,7 @@ import Dashboard from './components/Dashboard';
 import AIInsights from './components/AIInsights';
 import Simulation from './components/Simulation';
 import DataConfig from './components/DataConfig';
+import MergerAnalysis from './components/MergerAnalysis';
 import api from './services/api';
 
 export default function App() {
@@ -33,7 +34,7 @@ export default function App() {
       )}
 
       <div className={isLanding ? '' : 'main-content'}>
-        {!isLanding && page !== 'config' && (
+        {!isLanding && page !== 'config' && page !== 'merger' && (
           <div className="topbar" style={{ marginBottom: 0 }}>
             <div />
             <div className="topbar-right">
@@ -56,6 +57,7 @@ export default function App() {
 
         {page === 'landing' && <Landing onNavigate={setPage} />}
         {page === 'dashboard' && <Dashboard firmId={firmId} />}
+        {page === 'merger' && <MergerAnalysis firms={firms} />}
         {page === 'insights' && <AIInsights firmId={firmId} />}
         {page === 'simulation' && <Simulation firmId={firmId} />}
         {page === 'config' && <DataConfig />}

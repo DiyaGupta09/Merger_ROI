@@ -1,9 +1,10 @@
 import React from 'react';
-import { LayoutDashboard, Brain, FlaskConical, Settings, Zap } from 'lucide-react';
+import { LayoutDashboard, Brain, FlaskConical, Settings, Zap, GitMerge } from 'lucide-react';
 
 const NAV = [
   { id: 'landing', label: 'Home', icon: Zap },
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'merger', label: 'Merger Analysis', icon: GitMerge },
   { id: 'insights', label: 'AI Insights', icon: Brain },
   { id: 'simulation', label: 'Simulation', icon: FlaskConical },
   { id: 'config', label: 'Data Config', icon: Settings },
