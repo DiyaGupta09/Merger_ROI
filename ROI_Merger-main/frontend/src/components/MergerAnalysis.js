@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { GitMerge, TrendingUp, DollarSign, Zap, Brain } from 'lucide-react';
 import api from '../services/api';
 
@@ -167,7 +167,7 @@ export default function MergerAnalysis({ firms }) {
                     <Tooltip content={<CustomTooltip />} />
                     <Bar yAxisId="left" dataKey="revenue" name="Revenue" fill="#3b82f6" radius={[4,4,0,0]} />
                     <Bar yAxisId="left" dataKey="costs" name="Costs" fill="#8b5cf6" radius={[4,4,0,0]} />
-                    <Line yAxisId="right" type="monotone" dataKey="roi" name="roi" stroke="#10b981" strokeWidth={2} dot={{ fill: '#10b981', r: 4 }} />
+                    <Bar yAxisId="right" dataKey="roi" name="ROI %" fill="#10b981" radius={[4,4,0,0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
