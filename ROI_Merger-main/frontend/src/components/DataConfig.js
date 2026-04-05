@@ -154,7 +154,7 @@ export default function DataConfig() {
           {[
             { label: 'API Base URL', value: process.env.REACT_APP_API_URL || 'https://roimerger-production.up.railway.app' },
             { label: 'Forecast Horizon', value: '30 days' },
-            { label: 'RL Algorithm', value: 'PPO (Stable-Baselines3)' },
+            { label: 'RL Algorithm', value: 'PPO Heuristic (optimized)' },
             { label: 'Forecasting Model', value: 'XGBoost + Lag Features' },
             { label: 'Explainability', value: 'SHAP TreeExplainer' },
             { label: 'Deployment', value: 'Railway.app' },

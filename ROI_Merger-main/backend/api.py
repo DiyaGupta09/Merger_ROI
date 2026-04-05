@@ -82,8 +82,17 @@ def get_roi(firm_id: Optional[int] = None):
         with get_db_connection() as db:
             calculator = ROICalculator(db)
             if firm_id:
-                return calculator.calculate_roi(firm_id)
+                roi = calculator.calculate_roi(firm_id)
+                # Add firm name
+                rows = db.execute_query("SELECT firm_name FROM firm WHERE firm_id = %s", (firm_id,))
+                roi["firm_name"] = rows[0]["firm_name"] if rows else f"Firm {firm_id}"
+                return roi
             roi_list = calculator.calculate_all_firms_roi()
+            # Enrich with firm names
+            firm_rows = db.execute_query("SELECT firm_id, firm_name FROM firm")
+            firm_map = {r["firm_id"]: r["firm_name"] for r in firm_rows}
+            for r in roi_list:
+                r["firm_name"] = firm_map.get(r["firm_id"], f"Firm {r['firm_id']}")
             return {"roi_metrics": roi_list, "count": len(roi_list)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -286,10 +295,51 @@ def get_market_data(symbol: str = "SPY"):
 
 @app.get("/api/timeseries")
 def get_timeseries(firm_id: Optional[int] = Query(1)):
-    """Returns historical ROI time-series for a firm."""
+    """Returns historical ROI time-series for a firm — computed from real sales data."""
     try:
         with get_db_connection() as db:
-            rows = _data_agent.get_roi_timeseries(db, firm_id)
-        return {"firm_id": firm_id, "data": rows, "count": len(rows)}
+            # Compute monthly ROI directly from sales + staff costs
+            rows = db.execute_query("""
+                SELECT
+                    DATE_FORMAT(s.sale_date, '%%Y-%%m-01') as timestamp,
+                    SUM(s.total_amount) as revenue,
+                    COUNT(s.sale_id) as task_count
+                FROM sales s
+                WHERE s.firm_id = %s
+                GROUP BY DATE_FORMAT(s.sale_date, '%%Y-%%m-01')
+                ORDER BY timestamp ASC
+            """, (firm_id,))
+
+            monthly_cost_row = db.execute_query(
+                "SELECT COALESCE(SUM(salary),0)/12 as monthly_cost FROM staff WHERE firm_id = %s",
+                (firm_id,)
+            )
+            monthly_cost = float(monthly_cost_row[0]["monthly_cost"]) if monthly_cost_row else 0
+
+            firm_row = db.execute_query(
+                "SELECT total_capital FROM firm WHERE firm_id = %s", (firm_id,)
+            )
+            equity = float(firm_row[0]["total_capital"]) if firm_row else 500000
+
+            result = []
+            for r in rows:
+                rev = float(r["revenue"])
+                roi = ((rev - monthly_cost) / monthly_cost * 100) if monthly_cost > 0 else 0
+                result.append({
+                    "firm_id": firm_id,
+                    "timestamp": str(r["timestamp"])[:10],
+                    "roi": round(roi, 4),
+                    "equity": equity,
+                    "task_count": int(r["task_count"]),
+                    "budget_allocated": round(monthly_cost * 1.2, 2),
+                    "cash_flow": round(rev - monthly_cost, 2),
+                })
+
+            # Fall back to stored timeseries if no sales data
+            if not result:
+                result = _data_agent.get_roi_timeseries(db, firm_id)
+
+        return {"firm_id": firm_id, "data": result, "count": len(result)}
     except Exception as e:
+        logger.error(f"/api/timeseries error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
