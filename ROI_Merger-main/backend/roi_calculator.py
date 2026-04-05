@@ -36,7 +36,7 @@ class ROICalculator:
         return float(result[0]['total_revenue'])
     
     def calculate_total_costs(self, firm_id: int) -> float:
-        """Calculate total salary costs for a firm"""
+        """Calculate total salary costs for a firm (annual)"""
         query = """
             SELECT COALESCE(SUM(salary), 0) as total_salary
             FROM staff
@@ -47,20 +47,32 @@ class ROICalculator:
     
     def calculate_roi(self, firm_id: int, start_date: str = None, 
                      end_date: str = None) -> Dict[str, Any]:
-        """Calculate ROI for a firm"""
+        """Calculate ROI for a firm using total investment (salary + capital) as cost base"""
         revenue = self.calculate_total_revenue(firm_id, start_date, end_date)
-        costs = self.calculate_total_costs(firm_id)
-        
-        if costs == 0:
-            roi_percentage = 0 if revenue == 0 else float('inf')
+        salary_costs = self.calculate_total_costs(firm_id)
+
+        # Include firm capital as part of total investment for realistic ROI
+        capital_query = "SELECT COALESCE(total_capital, 0) as capital FROM firm WHERE firm_id = %s"
+        capital_result = self.db.execute_query(capital_query, (firm_id,))
+        total_capital = float(capital_result[0]['capital']) if capital_result else 0
+
+        # Total investment = annual salaries + capital deployed
+        total_investment = salary_costs + total_capital
+
+        if total_investment == 0:
+            roi_percentage = 0.0
         else:
-            roi_percentage = ((revenue - costs) / costs) * 100
-        
+            roi_percentage = ((revenue - salary_costs) / total_investment) * 100
+
+        # Round to 2 decimal places
+        roi_percentage = round(roi_percentage, 2)
+
         return {
             'firm_id': firm_id,
             'revenue': revenue,
-            'costs': costs,
-            'net_profit': revenue - costs,
+            'costs': salary_costs,
+            'total_investment': total_investment,
+            'net_profit': revenue - salary_costs,
             'roi_percentage': roi_percentage,
             'is_negative': roi_percentage < 0,
             'calculated_at': datetime.now().isoformat()

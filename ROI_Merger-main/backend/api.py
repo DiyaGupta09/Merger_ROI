@@ -22,6 +22,7 @@ from forecasting_agent import ForecastingAgent
 from explanation_agent import ExplanationAgent
 from rl_agent import RLAgent
 from simulation_agent import SimulationAgent
+from ai_merger_agent import AIMergerAgent
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -42,6 +43,7 @@ _forecasting_agent = ForecastingAgent(horizon=30, lags=3)
 _explanation_agent = ExplanationAgent()
 _rl_agent = RLAgent()
 _simulation_agent = SimulationAgent(horizon=30)
+_ai_merger_agent = AIMergerAgent()
 
 
 # ---------------------------------------------------------------------------
@@ -137,11 +139,13 @@ def get_resource_recommendations():
 
 @app.post("/api/merger/analyze")
 def analyze_merger(firm_a_id: int, firm_b_id: int):
+    """AI-powered merger analysis using XGBoost + SHAP + forecasting."""
     try:
         with get_db_connection() as db:
-            analyzer = MergerAnalyzer(db)
-            return analyzer.analyze_merger(firm_a_id, firm_b_id)
+            result = _ai_merger_agent.analyze(db, firm_a_id, firm_b_id)
+        return result
     except Exception as e:
+        logger.error(f"/api/merger/analyze error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -311,24 +315,27 @@ def get_timeseries(firm_id: Optional[int] = Query(1)):
             """, (firm_id,))
 
             monthly_cost_row = db.execute_query(
-                "SELECT COALESCE(SUM(salary),0)/12 as monthly_cost FROM staff WHERE firm_id = %s",
+                "SELECT COALESCE(SUM(salary),0) as annual_cost FROM staff WHERE firm_id = %s",
                 (firm_id,)
             )
-            monthly_cost = float(monthly_cost_row[0]["monthly_cost"]) if monthly_cost_row else 0
+            annual_cost = float(monthly_cost_row[0]["annual_cost"]) if monthly_cost_row else 0
+            monthly_cost = annual_cost / 12
 
             firm_row = db.execute_query(
                 "SELECT total_capital FROM firm WHERE firm_id = %s", (firm_id,)
             )
             equity = float(firm_row[0]["total_capital"]) if firm_row else 500000
+            # Monthly investment = monthly salary + capital/12
+            monthly_investment = monthly_cost + (equity / 12)
 
             result = []
             for r in rows:
                 rev = float(r["revenue"])
-                roi = ((rev - monthly_cost) / monthly_cost * 100) if monthly_cost > 0 else 0
+                roi = ((rev - monthly_cost) / monthly_investment * 100) if monthly_investment > 0 else 0
                 result.append({
                     "firm_id": firm_id,
                     "timestamp": str(r["timestamp"])[:10],
-                    "roi": round(roi, 4),
+                    "roi": round(roi, 2),
                     "equity": equity,
                     "task_count": int(r["task_count"]),
                     "budget_allocated": round(monthly_cost * 1.2, 2),
