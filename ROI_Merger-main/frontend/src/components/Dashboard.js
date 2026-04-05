@@ -117,7 +117,6 @@ export default function Dashboard({ firmId }) {
 
   // Compute real ROI change between first and last firm for KPI
   const avgRoi = summary?.average_roi || 0;
-  const topRoi = roiData[0]?.roi_percentage || 0;
   const roiChange = roiData.length > 1
     ? parseFloat((roiData[0].roi_percentage - roiData[roiData.length - 1].roi_percentage).toFixed(1))
     : null;
