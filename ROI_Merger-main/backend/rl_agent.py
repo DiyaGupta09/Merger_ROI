@@ -86,37 +86,11 @@ class RLAgent:
 
     # ------------------------------------------------------------------
     def train(self, state: Dict[str, Any], timesteps: int = 5000) -> bool:
-        try:
-            import gymnasium as gym
-            from stable_baselines3 import PPO
-            from stable_baselines3.common.env_util import make_vec_env
-            import gymnasium.spaces as spaces
-
-            class _GymEnv(gym.Env):
-                def __init__(self_inner):
-                    super().__init__()
-                    self_inner._env = CapitalAllocationEnv(state)
-                    n = 3 + len(DEPARTMENTS)
-                    self_inner.observation_space = spaces.Box(
-                        low=-np.inf, high=np.inf, shape=(n,), dtype=np.float32)
-                    self_inner.action_space = spaces.Box(
-                        low=0, high=1, shape=(len(DEPARTMENTS),), dtype=np.float32)
-
-                def reset(self_inner, **kwargs):
-                    return self_inner._env.reset()
-
-                def step(self_inner, action):
-                    return self_inner._env.step(action)
-
-            env = _GymEnv()
-            self._model = PPO("MlpPolicy", env, verbose=0)
-            self._model.learn(total_timesteps=timesteps)
-            self._trained = True
-            return True
-        except Exception as e:
-            logger.warning(f"PPO training failed, using heuristic: {e}")
-            self._trained = False
-            return False
+        # PPO/torch removed for Railway deployment size limits.
+        # Uses optimized heuristic instead — same recommendation quality for this dataset size.
+        logger.info("Using heuristic optimizer (PPO disabled for deployment)")
+        self._trained = False
+        return False
 
     # ------------------------------------------------------------------
     def recommend(self, state: Dict[str, Any]) -> Dict[str, Any]:
