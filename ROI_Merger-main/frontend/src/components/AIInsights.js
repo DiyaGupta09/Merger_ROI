@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Brain, Lightbulb, TrendingUp, RefreshCw } from 'lucide-react';
 import api from '../services/api';
 
@@ -42,7 +42,7 @@ export default function AIInsights({ firmId }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => { load(); }, [firmId]);
+  useEffect(() => { load(); }, [firmId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const load = async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true); else setLoading(true);
@@ -77,7 +77,6 @@ export default function AIInsights({ firmId }) {
   }
 
   const predictions = forecast?.predictions || [];
-  const today = new Date().toISOString().slice(0, 10);
   const chartData = predictions.map(p => ({
     date: p.date.slice(5),
     forecast: parseFloat(p.value),

@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Brain, FlaskConical, Settings, TrendingUp, Zap } from 'lucide-react';
+import { LayoutDashboard, Brain, FlaskConical, Settings, Zap } from 'lucide-react';
 
 const NAV = [
   { id: 'landing', label: 'Home', icon: Zap },

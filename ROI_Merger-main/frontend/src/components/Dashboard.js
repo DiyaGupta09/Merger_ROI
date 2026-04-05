@@ -41,9 +41,7 @@ export default function Dashboard({ firmId }) {
   const [timeseries, setTimeseries] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    load();
-  }, [firmId]);
+  useEffect(() => { load(); }, [firmId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const load = async () => {
     setLoading(true);

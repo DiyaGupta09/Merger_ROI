@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { FlaskConical, Zap, ArrowRight, ArrowUp, ArrowDown, Minus } from 'lucide-react';
+import { FlaskConical, Zap, ArrowUp, ArrowDown, Minus } from 'lucide-react';
 import api from '../services/api';
 
 const CustomTooltip = ({ active, payload, label }) => {
