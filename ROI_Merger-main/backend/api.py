@@ -22,7 +22,6 @@ from forecasting_agent import ForecastingAgent
 from explanation_agent import ExplanationAgent
 from rl_agent import RLAgent
 from simulation_agent import SimulationAgent
-from ai_merger_agent import AIMergerAgent
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -43,7 +42,6 @@ _forecasting_agent = ForecastingAgent(horizon=30, lags=3)
 _explanation_agent = ExplanationAgent()
 _rl_agent = RLAgent()
 _simulation_agent = SimulationAgent(horizon=30)
-_ai_merger_agent = AIMergerAgent()
 
 
 # ---------------------------------------------------------------------------
@@ -139,10 +137,11 @@ def get_resource_recommendations():
 
 @app.post("/api/merger/analyze")
 def analyze_merger(firm_a_id: int, firm_b_id: int):
-    """AI-powered merger analysis using XGBoost + SHAP + forecasting."""
+    """AI-powered merger analysis using XGBoost forecasting agent."""
     try:
         with get_db_connection() as db:
-            result = _ai_merger_agent.analyze(db, firm_a_id, firm_b_id)
+            analyzer = MergerAnalyzer(db)
+            result = analyzer.analyze_merger(firm_a_id, firm_b_id)
         return result
     except Exception as e:
         logger.error(f"/api/merger/analyze error: {e}")
