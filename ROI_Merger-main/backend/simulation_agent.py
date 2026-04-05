@@ -36,7 +36,14 @@ class SimulationAgent:
 
         current_final = current_traj[-1]["roi"]
         optimized_final = optimized_traj[-1]["roi"]
-        improvement = ((optimized_final - current_final) / max(abs(current_final), 1e-6)) * 100
+
+        # Use absolute difference instead of relative % to avoid division by near-zero
+        abs_improvement = optimized_final - current_final
+        # Express as % improvement relative to a meaningful base (avg of both)
+        base = (abs(current_final) + abs(optimized_final)) / 2
+        improvement = round((abs_improvement / max(base, 1.0)) * 100, 2)
+        # Cap at realistic range
+        improvement = round(min(max(improvement, -50), 50), 2)
 
         trace = self._build_trace(rl_recommendations, opt_boost, improvement)
 
@@ -55,31 +62,34 @@ class SimulationAgent:
         trajectory = []
         roi = base_roi
         base_date = datetime.today()
+        # Use realistic daily drift: stock market moves ~0.04% per day on average
+        daily_drift = boost / self.horizon  # spread boost evenly
         for day in range(1, self.horizon + 1):
-            # Natural drift + noise + boost
-            drift = np.random.normal(0.05 + boost / self.horizon, 0.3)
-            roi = roi + drift
+            noise = np.random.normal(0, 0.15)  # small realistic noise
+            roi = roi + daily_drift + noise
+            # Cap to realistic range
+            roi = round(min(max(roi, -30), 80), 4)
             trajectory.append({
                 "day": day,
                 "date": (base_date + timedelta(days=day)).strftime("%Y-%m-%d"),
-                "roi": round(roi, 4),
+                "roi": roi,
             })
         return trajectory
 
     # ------------------------------------------------------------------
     def _compute_boost(self, recommendations: List[Dict]) -> float:
-        """Estimate ROI boost from RL recommendations."""
+        """Estimate realistic ROI boost from RL recommendations (max ~5%)."""
         boost = 0.0
         for rec in recommendations:
             dept = rec.get("department", "")
             delta_pct = rec.get("recommended_pct", 0) - rec.get("current_pct", 0)
             if dept in ("Engineering", "Sales"):
-                boost += delta_pct * 0.04
-            elif dept in ("Marketing",):
-                boost += delta_pct * 0.02
+                boost += delta_pct * 0.008
+            elif dept == "Marketing":
+                boost += delta_pct * 0.004
             else:
-                boost -= abs(delta_pct) * 0.01
-        return float(np.clip(boost, -5, 15))
+                boost -= abs(delta_pct) * 0.002
+        return float(np.clip(boost, -3, 5))
 
     # ------------------------------------------------------------------
     def _build_trace(self, recommendations: List[Dict],

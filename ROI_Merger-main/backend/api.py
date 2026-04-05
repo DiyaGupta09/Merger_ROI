@@ -181,17 +181,17 @@ def get_dashboard_summary():
 
 @app.get("/api/forecast")
 def forecast_roi(firm_id: Optional[int] = Query(1)):
-    """Returns 30-day ROI forecast with confidence intervals."""
+    """Returns 30-day ROI forecast using real stock quarterly data."""
     try:
         with get_db_connection() as db:
-            state = _data_agent.get_firm_state(db, firm_id)
-        roi_series = state.get("roi_series", [])
+            roi_series = _data_agent.get_real_roi_series(db, firm_id)
         result = _forecasting_agent.forecast(roi_series)
-        return {
-            "firm_id": firm_id,
-            "horizon_days": 30,
-            **result,
-        }
+        # Cap forecast values to realistic range
+        for p in result.get("predictions", []):
+            p["value"] = round(min(max(float(p["value"]), -30), 80), 2)
+            p["lower"] = round(min(max(float(p["lower"]), -40), 90), 2)
+            p["upper"] = round(min(max(float(p["upper"]), -20), 90), 2)
+        return {"firm_id": firm_id, "horizon_days": 30, **result}
     except Exception as e:
         logger.error(f"/api/forecast error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
