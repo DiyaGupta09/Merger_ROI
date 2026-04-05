@@ -22,6 +22,7 @@ from forecasting_agent import ForecastingAgent
 from explanation_agent import ExplanationAgent
 from rl_agent import RLAgent
 from simulation_agent import SimulationAgent
+from market_intelligence import MarketIntelligence
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -42,6 +43,7 @@ _forecasting_agent = ForecastingAgent(horizon=30, lags=3)
 _explanation_agent = ExplanationAgent()
 _rl_agent = RLAgent()
 _simulation_agent = SimulationAgent(horizon=30)
+_market_intel = MarketIntelligence()
 
 
 # ---------------------------------------------------------------------------
@@ -348,4 +350,58 @@ def get_timeseries(firm_id: Optional[int] = Query(1)):
         return {"firm_id": firm_id, "data": result, "count": len(result)}
     except Exception as e:
         logger.error(f"/api/timeseries error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# Market Intelligence Endpoints (FMP)
+# ---------------------------------------------------------------------------
+
+@app.get("/api/market/fundamentals")
+def get_fundamentals(ticker: str = "AAPL"):
+    """Fetch real quarterly fundamentals + red/green flags for a ticker."""
+    try:
+        data = _market_intel.get_stock_fundamentals(ticker)
+        return data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/market/quarterly")
+def get_quarterly(ticker: str = "AAPL", quarters: int = 4):
+    """Fetch quarterly ROI history for a public company."""
+    try:
+        data = _market_intel.get_quarterly_roi(ticker, quarters)
+        return {"ticker": ticker, "quarterly_roi": data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/market/benchmark")
+def get_benchmark(firm_id: Optional[int] = Query(1)):
+    """Compare internal firm ROI against real market benchmarks by industry."""
+    try:
+        with get_db_connection() as db:
+            calculator = ROICalculator(db)
+            firm_roi_data = calculator.calculate_roi(firm_id)
+            internal_roi = float(firm_roi_data.get("roi_percentage", 0))
+
+            industry_row = db.execute_query(
+                "SELECT industry FROM firm WHERE firm_id = %s", (firm_id,)
+            )
+            industry = industry_row[0]["industry"] if industry_row else "Technology"
+
+        comparison = _market_intel.compare_with_market(internal_roi, industry)
+        return {"firm_id": firm_id, "industry": industry, **comparison}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/market/screener")
+def get_screener(industry: str = "Technology"):
+    """Screen top stocks in an industry with ROI flags."""
+    try:
+        benchmarks = _market_intel.get_industry_benchmarks(industry)
+        return {"industry": industry, "stocks": benchmarks, "count": len(benchmarks)}
+    except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

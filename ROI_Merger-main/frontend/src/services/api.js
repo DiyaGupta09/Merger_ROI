@@ -25,6 +25,12 @@ const api = {
   getMarketData: (symbol = 'SPY') => client.get('/api/market', { params: { symbol } }).then(r => r.data),
   getTimeseries: (firmId = 1) => client.get('/api/timeseries', { params: { firm_id: firmId } }).then(r => r.data),
   getHealth: () => client.get('/api/health').then(r => r.data),
+
+  // Market Intelligence (FMP)
+  getFundamentals: (ticker = 'AAPL') => client.get('/api/market/fundamentals', { params: { ticker } }).then(r => r.data),
+  getQuarterlyROI: (ticker = 'AAPL', quarters = 4) => client.get('/api/market/quarterly', { params: { ticker, quarters } }).then(r => r.data),
+  getBenchmark: (firmId = 1) => client.get('/api/market/benchmark', { params: { firm_id: firmId } }).then(r => r.data),
+  getScreener: (industry = 'Technology') => client.get('/api/market/screener', { params: { industry } }).then(r => r.data),
 };
 
 export default api;
