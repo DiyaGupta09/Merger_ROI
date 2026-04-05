@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadialBarChart, RadialBar, Legend } from 'recharts';
-import { GitMerge, TrendingUp, DollarSign, Users, CheckCircle, AlertCircle, XCircle, Zap } from 'lucide-react';
+import React, { useState } from 'react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { GitMerge, TrendingUp, DollarSign, Zap } from 'lucide-react';
 import api from '../services/api';
 
 const fmt = (v) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(v);
@@ -26,9 +26,9 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 function RecommendationBadge({ rec }) {
   const config = {
-    Proceed: { icon: CheckCircle, color: 'var(--accent-green)', badge: 'badge-green', label: '✅ Proceed with Merger' },
-    Review: { icon: AlertCircle, color: 'var(--accent-amber)', badge: 'badge-amber', label: '⚠️ Review Before Proceeding' },
-    Decline: { icon: XCircle, color: 'var(--accent-red)', badge: 'badge-red', label: '❌ Decline Merger' },
+    Proceed: { color: 'var(--accent-green)', badge: 'badge-green', label: '✅ Proceed with Merger' },
+    Review: { color: 'var(--accent-amber)', badge: 'badge-amber', label: '⚠️ Review Before Proceeding' },
+    Decline: { color: 'var(--accent-red)', badge: 'badge-red', label: '❌ Decline Merger' },
   };
   const c = config[rec] || config['Review'];
   return (
@@ -36,7 +36,7 @@ function RecommendationBadge({ rec }) {
       display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px',
       background: `${c.color}10`, border: `1px solid ${c.color}40`, borderRadius: 12
     }}>
-      <c.icon size={24} color={c.color} />
+      <div style={{ fontSize: 24 }}>{c.label.split(' ')[0]}</div>
       <div>
         <div style={{ fontSize: 16, fontWeight: 700, color: c.color }}>{c.label}</div>
         <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
@@ -164,7 +164,7 @@ export default function MergerAnalysis({ firms }) {
               { label: 'Combined Revenue', value: fmtShort(result.combined_revenue), icon: DollarSign, color: 'var(--accent-blue)' },
               { label: 'Merger ROI', value: `${parseFloat(result.roi_percentage || 0).toFixed(1)}%`, icon: TrendingUp, color: 'var(--accent-green)' },
               { label: 'Cost Synergies', value: fmtShort(result.estimated_synergies), icon: Zap, color: 'var(--accent-purple)' },
-              { label: 'Net Benefit', value: fmtShort(result.net_benefit), icon: Users, color: 'var(--accent-cyan)' },
+              { label: 'Net Benefit', value: fmtShort(result.net_benefit), icon: TrendingUp, color: 'var(--accent-cyan)' },
             ].map(({ label, value, icon: Icon, color }) => (
               <div key={label} className="kpi-card">
                 <div className="kpi-icon" style={{ background: `${color}20` }}><Icon size={18} color={color} /></div>
