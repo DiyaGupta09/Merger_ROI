@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { TrendingUp, TrendingDown, Globe, Search, RefreshCw } from 'lucide-react';
+import { TrendingUp, TrendingDown, Globe, Search } from 'lucide-react';
 import api from '../services/api';
 
 const INDUSTRIES = ['Technology', 'Finance', 'Healthcare', 'Retail', 'Energy', 'Logistics', 'Education', 'Media'];
@@ -79,7 +79,6 @@ export default function MarketIntelligence({ firmId }) {
   const [benchmark, setBenchmark] = useState(null);
   const [ticker, setTicker] = useState('AAPL');
   const [loading, setLoading] = useState(false);
-  const [loadingBench, setLoadingBench] = useState(false);
 
   useEffect(() => { loadScreener(); }, [industry]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { loadBenchmark(); }, [firmId]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -94,12 +93,10 @@ export default function MarketIntelligence({ firmId }) {
   };
 
   const loadBenchmark = async () => {
-    setLoadingBench(true);
     try {
       const data = await api.getBenchmark(firmId);
       setBenchmark(data);
     } catch (e) { console.error(e); }
-    finally { setLoadingBench(false); }
   };
 
   const loadStock = async (t) => {
