@@ -52,10 +52,10 @@ function StockCard({ stock, onClick }) {
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
         {[
-          { label: 'ROI', value: `${stock.roi?.toFixed(1)}%`, pos: stock.roi > 10 },
-          { label: 'Rev Growth', value: `${stock.revenue_growth?.toFixed(1)}%`, pos: stock.revenue_growth > 5 },
-          { label: 'Margin', value: `${stock.profit_margin?.toFixed(1)}%`, pos: stock.profit_margin > 10 },
-          { label: 'P/E', value: stock.pe_ratio?.toFixed(1), pos: stock.pe_ratio > 10 && stock.pe_ratio < 30 },
+          { label: 'ROI (52W)', value: `${stock.roi?.toFixed(1)}%`, pos: stock.roi > 10 },
+          { label: 'Today', value: `${stock.change_pct >= 0 ? '+' : ''}${stock.change_pct?.toFixed(2)}%`, pos: stock.change_pct > 0 },
+          { label: 'EPS Margin', value: `${stock.profit_margin?.toFixed(1)}%`, pos: stock.profit_margin > 5 },
+          { label: 'P/E', value: stock.pe_ratio > 0 ? stock.pe_ratio?.toFixed(1) : 'N/A', pos: stock.pe_ratio > 8 && stock.pe_ratio < 35 },
         ].map(({ label, value, pos }) => (
           <div key={label} style={{ padding: '6px 8px', background: 'rgba(255,255,255,0.02)', borderRadius: 8 }}>
             <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 2 }}>{label}</div>
@@ -65,7 +65,7 @@ function StockCard({ stock, onClick }) {
       </div>
       <div style={{ marginTop: 10, fontSize: 12, color: stock.change_pct >= 0 ? 'var(--accent-green)' : 'var(--accent-red)', display: 'flex', alignItems: 'center', gap: 4 }}>
         {stock.change_pct >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-        {stock.change_pct >= 0 ? '+' : ''}{stock.change_pct?.toFixed(2)}% today · ${stock.price}
+        {stock.change_pct >= 0 ? '+' : ''}{stock.change_pct?.toFixed(2)}% today · ${Number(stock.price).toFixed(2)}
       </div>
     </div>
   );
@@ -187,9 +187,12 @@ export default function MarketIntelligence({ firmId }) {
                   <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{selected.name}</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 20, fontWeight: 700 }}>${selected.price}</div>
+                  <div style={{ fontSize: 20, fontWeight: 700 }}>${Number(selected.price).toFixed(2)}</div>
                   <div style={{ fontSize: 13, color: selected.change_pct >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' }}>
-                    {selected.change_pct >= 0 ? '+' : ''}{selected.change_pct?.toFixed(2)}%
+                    {selected.change_pct >= 0 ? '+' : ''}{selected.change_pct?.toFixed(2)}% today
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                    52W: ${selected.year_low?.toFixed(0)} – ${selected.year_high?.toFixed(0)}
                   </div>
                 </div>
               </div>
