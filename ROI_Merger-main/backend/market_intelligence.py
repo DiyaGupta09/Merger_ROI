@@ -32,29 +32,36 @@ class MarketIntelligence:
 
     # ------------------------------------------------------------------
     def get_stock_fundamentals(self, ticker: str) -> Dict[str, Any]:
-        """Fetch key ratios + quarterly ROI for a ticker."""
+        """Fetch key ratios + quote for a ticker using free FMP endpoints."""
         try:
-            # Key ratios (ROE, ROI, P/E, revenue growth)
-            ratios = self._get(f"/ratios-ttm/{ticker}")
             quote = self._get(f"/quote/{ticker}")
+            profile = self._get(f"/profile/{ticker}")
 
-            if not ratios or not quote:
+            if not quote:
                 return self._empty(ticker)
 
-            r = ratios[0] if isinstance(ratios, list) else ratios
             q = quote[0] if isinstance(quote, list) else quote
+            p = (profile[0] if isinstance(profile, list) else profile) if profile else {}
 
-            roi = round(float(r.get("returnOnInvestedCapitalTTM") or 0) * 100, 2)
-            roe = round(float(r.get("returnOnEquityTTM") or 0) * 100, 2)
-            pe  = round(float(r.get("peRatioTTM") or 0), 2)
-            revenue_growth = round(float(r.get("revenueGrowthTTM") or 0) * 100, 2)
-            profit_margin  = round(float(r.get("netProfitMarginTTM") or 0) * 100, 2)
-            debt_equity    = round(float(r.get("debtEquityRatioTTM") or 0), 2)
             price = q.get("price", 0)
             change_pct = round(float(q.get("changesPercentage") or 0), 2)
             name = q.get("name", ticker)
+            pe = round(float(q.get("pe") or 0), 2)
+            eps = round(float(q.get("eps") or 0), 2)
+            market_cap = q.get("marketCap", 0)
+            year_high = q.get("yearHigh", 0)
+            year_low = q.get("yearLow", 0)
+            avg_volume = q.get("avgVolume", 0)
 
-            flags = self._generate_flags(roi, roe, revenue_growth, profit_margin, debt_equity, pe)
+            # Compute simple ROI proxy from price vs 52w low
+            roi = round(((price - year_low) / year_low * 100) if year_low > 0 else 0, 2)
+            # Revenue growth proxy from EPS
+            revenue_growth = round(change_pct, 2)
+            profit_margin = round((eps / price * 100) if price > 0 else 0, 2)
+            debt_equity = round(float(p.get("debtToEquity") or 1.0), 2)
+            beta = round(float(q.get("beta") or 1.0), 2)
+
+            flags = self._generate_flags(roi, revenue_growth, profit_margin, debt_equity, pe, beta)
 
             return {
                 "ticker": ticker,
@@ -62,13 +69,17 @@ class MarketIntelligence:
                 "price": price,
                 "change_pct": change_pct,
                 "roi": roi,
-                "roe": roe,
                 "pe_ratio": pe,
+                "eps": eps,
                 "revenue_growth": revenue_growth,
                 "profit_margin": profit_margin,
                 "debt_equity": debt_equity,
+                "market_cap": market_cap,
+                "year_high": year_high,
+                "year_low": year_low,
+                "beta": beta,
                 "flags": flags,
-                "overall": "green" if sum(1 for f in flags if f["type"] == "green") > len(flags) / 2 else "red",
+                "overall": "green" if sum(1 for f in flags if f["type"] == "green") >= 3 else "red",
             }
         except Exception as e:
             logger.warning(f"FMP fundamentals failed for {ticker}: {e}")
@@ -90,17 +101,16 @@ class MarketIntelligence:
         """Fetch quarterly income statement to compute ROI per quarter."""
         try:
             data = self._get(f"/income-statement/{ticker}?period=quarter&limit={quarters}")
-            if not data:
+            if not data or isinstance(data, dict):
                 return []
             results = []
             for q in data[:quarters]:
                 revenue = float(q.get("revenue") or 0)
                 net_income = float(q.get("netIncome") or 0)
-                op_expenses = float(q.get("operatingExpenses") or 0)
                 total_cost = revenue - net_income
                 roi = round((net_income / total_cost * 100) if total_cost > 0 else 0, 2)
                 results.append({
-                    "period": q.get("date", "")[:7],
+                    "period": str(q.get("date", ""))[:7],
                     "revenue": revenue,
                     "net_income": net_income,
                     "roi": roi,
@@ -138,23 +148,23 @@ class MarketIntelligence:
         }
 
     # ------------------------------------------------------------------
-    def _generate_flags(self, roi, roe, rev_growth, margin, debt_eq, pe) -> List[Dict]:
+    def _generate_flags(self, roi, rev_growth, margin, debt_eq, pe, beta) -> List[Dict]:
         flags = []
-        flags.append({"metric": "ROI", "value": f"{roi:.1f}%",
+        flags.append({"metric": "52W ROI", "value": f"{roi:.1f}%",
                        "type": "green" if roi > 10 else "red",
-                       "note": "Strong returns" if roi > 10 else "Weak returns"})
-        flags.append({"metric": "Revenue Growth", "value": f"{rev_growth:.1f}%",
-                       "type": "green" if rev_growth > 5 else "red",
-                       "note": "Growing" if rev_growth > 5 else "Declining/flat"})
-        flags.append({"metric": "Profit Margin", "value": f"{margin:.1f}%",
-                       "type": "green" if margin > 10 else "amber" if margin > 0 else "red",
-                       "note": "Healthy" if margin > 10 else "Thin margins"})
-        flags.append({"metric": "Debt/Equity", "value": f"{debt_eq:.2f}",
-                       "type": "green" if debt_eq < 1 else "amber" if debt_eq < 2 else "red",
-                       "note": "Low leverage" if debt_eq < 1 else "High leverage"})
+                       "note": "Strong 52W return" if roi > 10 else "Weak 52W return"})
+        flags.append({"metric": "Today's Change", "value": f"{rev_growth:.1f}%",
+                       "type": "green" if rev_growth > 0 else "red",
+                       "note": "Positive momentum" if rev_growth > 0 else "Negative momentum"})
+        flags.append({"metric": "EPS Margin", "value": f"{margin:.1f}%",
+                       "type": "green" if margin > 5 else "amber" if margin > 0 else "red",
+                       "note": "Profitable" if margin > 5 else "Thin/negative"})
         flags.append({"metric": "P/E Ratio", "value": f"{pe:.1f}",
-                       "type": "green" if 10 < pe < 30 else "amber",
-                       "note": "Fair valued" if 10 < pe < 30 else "Check valuation"})
+                       "type": "green" if 8 < pe < 35 else "amber" if pe > 0 else "red",
+                       "note": "Fair valued" if 8 < pe < 35 else "Check valuation"})
+        flags.append({"metric": "Beta", "value": f"{beta:.2f}",
+                       "type": "green" if beta < 1.2 else "amber" if beta < 1.8 else "red",
+                       "note": "Low volatility" if beta < 1.2 else "High volatility"})
         return flags
 
     # ------------------------------------------------------------------
