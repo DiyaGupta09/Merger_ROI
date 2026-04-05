@@ -405,3 +405,59 @@ def get_screener(industry: str = "Technology"):
         return {"industry": industry, "stocks": benchmarks, "count": len(benchmarks)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/stocks/quarterly")
+def get_stock_quarterly(ticker: str = "AAPL", limit: int = 20):
+    """Get quarterly ROI from real archive dataset loaded into DB."""
+    try:
+        with get_db_connection() as db:
+            rows = db.execute_query(
+                "SELECT quarter, start_price, end_price, roi, avg_volume FROM stock_quarterly_roi WHERE ticker=%s ORDER BY quarter ASC LIMIT %s",
+                (ticker.upper(), limit)
+            )
+        return {"ticker": ticker.upper(), "data": [dict(r) for r in rows], "count": len(rows)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/stocks/tickers")
+def get_available_tickers():
+    """List all tickers available in the archive dataset."""
+    try:
+        with get_db_connection() as db:
+            rows = db.execute_query(
+                "SELECT ticker, COUNT(*) as quarters, MIN(quarter) as from_q, MAX(quarter) as to_q, AVG(roi) as avg_roi FROM stock_quarterly_roi GROUP BY ticker ORDER BY ticker"
+            )
+        return {"tickers": [dict(r) for r in rows]}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/stocks/compare")
+def compare_stocks(ticker_a: str = "AAPL", ticker_b: str = "MSFT"):
+    """Compare two real stocks' quarterly ROI — used in merger analysis."""
+    try:
+        with get_db_connection() as db:
+            a = db.execute_query(
+                "SELECT quarter, roi FROM stock_quarterly_roi WHERE ticker=%s ORDER BY quarter ASC",
+                (ticker_a.upper(),)
+            )
+            b = db.execute_query(
+                "SELECT quarter, roi FROM stock_quarterly_roi WHERE ticker=%s ORDER BY quarter ASC",
+                (ticker_b.upper(),)
+            )
+            # Align by quarter
+            a_map = {r['quarter']: float(r['roi']) for r in a}
+            b_map = {r['quarter']: float(r['roi']) for r in b}
+            common = sorted(set(a_map.keys()) & set(b_map.keys()))
+            combined = [{"quarter": q, ticker_a: a_map[q], ticker_b: b_map[q],
+                         "combined": round((a_map[q] + b_map[q]) / 2, 4)} for q in common]
+        return {
+            "ticker_a": ticker_a.upper(),
+            "ticker_b": ticker_b.upper(),
+            "data": combined,
+            "count": len(combined)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

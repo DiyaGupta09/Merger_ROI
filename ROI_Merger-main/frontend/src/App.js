@@ -59,7 +59,7 @@ export default function App() {
         {page === 'landing' && <Landing onNavigate={setPage} />}
         {page === 'dashboard' && <Dashboard firmId={firmId} />}
         {page === 'merger' && <MergerAnalysis firms={firms} />}
-        {page === 'market' && <MarketIntelligence firmId={firmId} />}
+        {page === 'market' && <MarketIntelligence />}
         {page === 'insights' && <AIInsights firmId={firmId} />}
         {page === 'simulation' && <Simulation firmId={firmId} />}
         {page === 'config' && <DataConfig />}

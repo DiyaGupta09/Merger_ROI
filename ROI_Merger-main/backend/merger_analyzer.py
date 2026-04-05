@@ -165,30 +165,58 @@ class MergerAnalyzer:
 
     # ------------------------------------------------------------------
     def _get_roi_series(self, firm_id: int):
-        """Fetch monthly ROI series for a firm from DB."""
+        """
+        Fetch ROI series for a firm.
+        First tries to match firm name to a real stock ticker from archive data.
+        Falls back to monthly sales-based ROI.
+        """
+        # Map firm names to real tickers from the archive dataset
+        FIRM_TICKER_MAP = {
+            'techvision': 'AAPL', 'dataflow': 'MSFT', 'cloudnet': 'GOOGL',
+            'financehub': 'IBM', 'retailmax': 'AMZN', 'healthcare': 'CSCO',
+            'edutech': 'CRM', 'greenenergy': 'NVDA', 'logitrans': 'ORCL',
+            'mediaworks': 'NFLX', 'adbe': 'ADBE', 'intc': 'INTC',
+            'meta': 'META', 'tsla': 'TSLA',
+        }
+        try:
+            # Get firm name
+            firm_row = self.db.execute_query(
+                "SELECT firm_name FROM firm WHERE firm_id = %s", (firm_id,)
+            )
+            if firm_row:
+                name_key = firm_row[0]['firm_name'].lower().replace(' ', '').replace('inc','').replace('corp','').replace('co','').replace('group','').replace('systems','').replace('solutions','').replace('plus','').replace('learning','').replace('studio','')
+                ticker = None
+                for key, t in FIRM_TICKER_MAP.items():
+                    if key in name_key:
+                        ticker = t
+                        break
+
+                if ticker:
+                    rows = self.db.execute_query(
+                        "SELECT roi FROM stock_quarterly_roi WHERE ticker=%s ORDER BY quarter ASC",
+                        (ticker,)
+                    )
+                    if rows:
+                        return [float(r['roi']) for r in rows]
+        except Exception as e:
+            logger.warning(f"Stock ticker lookup failed: {e}")
+
+        # Fallback: compute from sales data
         try:
             rows = self.db.execute_query("""
-                SELECT
-                    DATE_FORMAT(s.sale_date, '%%Y-%%m-01') as month,
-                    SUM(s.total_amount) as revenue
-                FROM sales s
-                WHERE s.firm_id = %s
+                SELECT DATE_FORMAT(s.sale_date, '%%Y-%%m-01') as month,
+                       SUM(s.total_amount) as revenue
+                FROM sales s WHERE s.firm_id = %s
                 GROUP BY DATE_FORMAT(s.sale_date, '%%Y-%%m-01')
                 ORDER BY month ASC
             """, (firm_id,))
-
             cost_row = self.db.execute_query(
-                "SELECT COALESCE(SUM(salary),0) as annual FROM staff WHERE firm_id = %s",
-                (firm_id,)
-            )
+                "SELECT COALESCE(SUM(salary),0) as annual FROM staff WHERE firm_id=%s", (firm_id,))
             capital_row = self.db.execute_query(
-                "SELECT COALESCE(total_capital,0) as cap FROM firm WHERE firm_id = %s",
-                (firm_id,)
-            )
+                "SELECT COALESCE(total_capital,0) as cap FROM firm WHERE firm_id=%s", (firm_id,))
             annual_cost = float(cost_row[0]['annual']) if cost_row else 0
             capital = float(capital_row[0]['cap']) if capital_row else 1
             monthly_investment = (annual_cost / 12) + (capital / 12)
-
             series = []
             for r in rows:
                 rev = float(r['revenue'])

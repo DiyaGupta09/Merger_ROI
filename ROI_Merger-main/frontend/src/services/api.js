@@ -26,11 +26,10 @@ const api = {
   getTimeseries: (firmId = 1) => client.get('/api/timeseries', { params: { firm_id: firmId } }).then(r => r.data),
   getHealth: () => client.get('/api/health').then(r => r.data),
 
-  // Market Intelligence (FMP)
-  getFundamentals: (ticker = 'AAPL') => client.get('/api/market/fundamentals', { params: { ticker } }).then(r => r.data),
-  getQuarterlyROI: (ticker = 'AAPL', quarters = 4) => client.get('/api/market/quarterly', { params: { ticker, quarters } }).then(r => r.data),
-  getBenchmark: (firmId = 1) => client.get('/api/market/benchmark', { params: { firm_id: firmId } }).then(r => r.data),
-  getScreener: (industry = 'Technology') => client.get('/api/market/screener', { params: { industry } }).then(r => r.data),
+  // Real archive stock data (from CSV dataset loaded into DB)
+  getStockQuarterly: (ticker = 'AAPL', limit = 20) => client.get('/api/stocks/quarterly', { params: { ticker, limit } }).then(r => r.data),
+  getAvailableTickers: () => client.get('/api/stocks/tickers').then(r => r.data),
+  compareStocks: (a, b) => client.get('/api/stocks/compare', { params: { ticker_a: a, ticker_b: b } }).then(r => r.data),
 };
 
 export default api;
